@@ -7,6 +7,7 @@ import os
 import time
 
 from oneloop.context import RunContext
+from oneloop.stages import land
 
 APPEAR_GRACE_S = 120
 
@@ -19,6 +20,12 @@ def run(ctx: RunContext) -> str:
     s = ctx.state
     attempt = len([r for r in s.stages if r.phase == "ci"]) + 1
     with ctx.stage("ci", attempt) as rec:
+        # GitHub runs no pull_request workflows on a PR that conflicts with its
+        # base, so catch up with the base before waiting on CI.
+        nxt = land.sync_with_base(ctx)
+        if nxt:
+            rec.note = "base moved; caught up before CI"
+            return nxt
         started = time.time()
         deadline = started + 60 * float(ctx.cfg["ci"]["timeout_min"])
         try:
@@ -30,6 +37,10 @@ def run(ctx: RunContext) -> str:
                 checks = ctx.gh.checks(s.pr_number)
                 waited = time.time() - started
                 if not checks:
+                    if pr.merge_state == "DIRTY":
+                        nxt = land.sync_with_base(ctx)
+                        if nxt:
+                            return nxt
                     if waited > min(APPEAR_GRACE_S, deadline - started):
                         ctx.escalate("couldnt_run", "CI reported no checks for this PR",
                                      'If this repo has no CI, set `ci.mode = "none"` in .oneloop.toml on the base branch.')

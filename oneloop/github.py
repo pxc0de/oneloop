@@ -97,6 +97,7 @@ class GitHub:
     def checks(self, n: int) -> list[Check]: raise NotImplementedError
     def failed_log(self, check: Check) -> str: raise NotImplementedError
     def merge(self, n: int, sha: str, method: str, subject: str, body: str) -> None: raise NotImplementedError
+    def close_pr(self, n: int, comment: str) -> None: raise NotImplementedError
 
     # --- helpers built on the primitives ---------------------------------
     def find_comment(self, n: int, key: str) -> Comment | None:
@@ -277,6 +278,10 @@ class GhCli(GitHub):
         self._run("pr", "merge", str(n), "-R", self.repo, f"--{method}",
                   "--match-head-commit", sha, "--subject", subject, "--body", body,
                   "--delete-branch")
+
+
+    def close_pr(self, n: int, comment: str) -> None:
+        self._run("pr", "close", str(n), "-R", self.repo, "--comment", comment, "--delete-branch", check=False)
 
 
 def detect_repo(path: str) -> tuple[str, str]:

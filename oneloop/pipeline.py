@@ -30,8 +30,11 @@ def start(repo: str, repo_path: str, issue: int, gh: GitHub, base: str,
           require_trusted_label: bool = False, fetch: bool = True) -> RunState:
     """Create (or load) the run, its worktree and its claim on the issue."""
     s = load(repo, issue)
-    if s is not None:
+    if s is not None and s.status != "cancelled":
         return s
+    if s is not None:
+        # Running a cancelled issue again starts over; the old run is kept for the record.
+        s.dir.rename(s.dir.with_name(f"{issue}.cancelled-{int(s.updated_at)}"))
     iss = gh.issue(issue)
     if require_trusted_label:
         trigger = load_rules(repo_path, base, fetch=fetch).config["labels"]["trigger"]
@@ -150,9 +153,14 @@ def cancel(s: RunState, gh: GitHub, cleanup: bool = True) -> RunState:
     emit(s, "human.cancel")
     ledger.record(s, "cancelled")
     save(s)
-    for label in ("oneloop:claimed", "oneloop:needs-human"):
+    for label in ("oneloop:claimed", "oneloop:needs-human", "oneloop:pr"):
         try:
             gh.remove_label(s.issue, label)
+        except GitHubError:
+            pass
+    if s.pr_number:
+        try:
+            gh.close_pr(s.pr_number, "Closed by `oneloop cancel`.")
         except GitHubError:
             pass
     if cleanup and Path(s.worktree).exists():

@@ -204,6 +204,8 @@ def all_runs() -> list[RunState]:
     if not root.exists():
         return out
     for f in sorted(root.glob("*/*/state.json")):
+        if not f.parent.name.isdigit():  # archived runs, e.g. 3.cancelled-1794...
+            continue
         try:
             out.append(RunState.from_json(json.loads(f.read_text())))
         except (ValueError, TypeError, json.JSONDecodeError):

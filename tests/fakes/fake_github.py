@@ -122,3 +122,7 @@ class FakeGitHub(GitHub):
         self.merges.append({"n": n, "sha": sha, "subject": subject, "body": body})
         pr.state = "MERGED"
         pr.merge_commit = "m" + sha[:6]
+
+    def close_pr(self, n, comment):
+        self.prs[n].state = "CLOSED"
+        self.create_comment(n, comment)

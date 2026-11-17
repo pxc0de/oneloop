@@ -103,19 +103,9 @@ def _recheck(ctx: RunContext) -> str | None:
         c = fresh[-1]
         ctx.escalate("changed_under_us", f"new comment on the PR from @{c.author}", c.body[:1000])
 
-    # Base moved: rebase and go round again.
-    gitops.fetch(ctx.wt, s.base)
-    base = ctx.rules.base_ref
-    if not gitops.is_ancestor(ctx.wt, base, "HEAD"):
-        old_pid = s.reviewed_patch_id
-        if not gitops.rebase(ctx.wt, base):
-            return _resolve_conflict(ctx, base)
-        s.head_sha = gitops.head(ctx.wt)
-        s.verified_sha = None
-        same = bool(old_pid) and gitops.patch_id(ctx.wt, base) == old_pid
-        s.reviewed_sha = s.head_sha if same else None
-        ctx.emit("rebased", head=s.head_sha, review_carried_over=same)
-        return "checks"
+    nxt = sync_with_base(ctx)
+    if nxt:
+        return nxt
 
     if s.verified_sha != s.head_sha:
         return "checks"
@@ -126,6 +116,26 @@ def _recheck(ctx: RunContext) -> str | None:
         if not checks or any(c.bucket in ("pending", "fail", "cancel") for c in checks):
             return "ci"
     return None
+
+
+def sync_with_base(ctx: RunContext) -> str | None:
+    """If the base branch moved, bring the branch up to date and return the
+    phase to continue from; None if it is already up to date. A clean rebase
+    keeps the review when the patch-id is unchanged; verify always runs again."""
+    s = ctx.state
+    gitops.fetch(ctx.wt, s.base)
+    base = ctx.rules.base_ref
+    if gitops.is_ancestor(ctx.wt, base, "HEAD"):
+        return None
+    old_pid = s.reviewed_patch_id
+    if not gitops.rebase(ctx.wt, base):
+        return _resolve_conflict(ctx, base)
+    s.head_sha = gitops.head(ctx.wt)
+    s.verified_sha = None
+    same = bool(old_pid) and gitops.patch_id(ctx.wt, base) == old_pid
+    s.reviewed_sha = s.head_sha if same else None
+    ctx.emit("rebased", head=s.head_sha, review_carried_over=same)
+    return "checks"
 
 
 def _resolve_conflict(ctx: RunContext, base: str) -> str:

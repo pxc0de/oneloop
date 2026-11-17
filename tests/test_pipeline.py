@@ -218,6 +218,17 @@ class PipelineTest(unittest.TestCase):
                              cwd=self.remote, capture_output=True, text=True).stdout
         self.assertIn("merge origin/main", log)
 
+    def test_cancel_closes_the_pr_and_a_rerun_starts_fresh(self):
+        self.scenario(spec=[{"output": SPEC_OK}], build=[self.build()], verify=[{"output": VERIFY_CANT}])
+        s = self.run_loop()
+        self.assertEqual(s.needs_human.kind, "couldnt_run")
+        s.pr_number = None
+        pipeline.cancel(s, self.gh)
+        again = pipeline.start("o/r", str(self.repo), 1, self.gh, "main")
+        self.assertEqual(again.status, "running")
+        self.assertEqual(again.phase, "spec")
+        self.assertTrue(any(p.name.startswith("1.cancelled-") for p in s.dir.parent.iterdir()))
+
     def test_silent_hung_session_is_killed_by_the_watchdog(self):
         from oneloop import claude
         self.scenario(spec=[{"hang": 30}])
