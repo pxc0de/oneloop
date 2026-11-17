@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>oneloop</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --raised: #ffffff;
+  --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --accent: #2a78d6; --accent-ink: #ffffff;
+  --good: #0ca30c; --good-ink: #006300; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --s-spec: #2a78d6; --s-build: #eb6834; --s-checks: #1baf7a; --s-verify: #eda100;
+  --s-review: #e87ba4; --s-ship: #008300; --s-ci: #6250d6; --s-land: #e34948;
+  --wash: rgba(42,120,214,0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --raised: #222221;
+    --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --accent: #3987e5; --good-ink: #0ca30c;
+    --s-spec: #3987e5; --s-build: #d95926; --s-checks: #199e70; --s-verify: #c98500;
+    --s-review: #d55181; --s-ship: #008300; --s-ci: #9085e9; --s-land: #e66767;
+    --wash: rgba(57,135,229,0.12);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --raised: #222221;
+  --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --accent: #3987e5; --good-ink: #0ca30c;
+  --s-spec: #3987e5; --s-build: #d95926; --s-checks: #199e70; --s-verify: #c98500;
+  --s-review: #d55181; --s-ship: #008300; --s-ci: #9085e9; --s-land: #e66767;
+  --wash: rgba(57,135,229,0.12);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--page); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, pre, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; }
+header { position: sticky; top: 0; z-index: 5; background: var(--page); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px; padding: 10px 24px; }
+header .brand { font-weight: 700; letter-spacing: -0.01em; font-size: 16px; color: var(--ink); }
+header nav { display: flex; gap: 4px; }
+header nav a { color: var(--ink-2); padding: 4px 10px; border-radius: 6px; }
+header nav a.on { color: var(--ink); background: var(--wash); }
+header .spacer { flex: 1; }
+.conn { font-size: 12px; color: var(--muted); }
+.conn::before { content: "●"; margin-right: 4px; color: var(--good); }
+.conn.off::before { color: var(--critical); }
+main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 64px; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); margin: 28px 0 10px; font-weight: 600; }
+h2 .count { color: var(--muted); font-weight: 500; margin-left: 6px; }
+h1 { font-size: 20px; margin: 4px 0 6px; letter-spacing: -0.01em; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.stack > * + * { margin-top: 10px; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.muted { color: var(--muted); } .ink2 { color: var(--ink-2); }
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 1px 8px; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--ink-2); white-space: nowrap; }
+.status { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; }
+.status i { font-style: normal; }
+.st-good { color: var(--good-ink); } .st-warn { color: var(--ink); } .st-warn i { color: var(--warning); }
+.st-serious i { color: var(--serious); } .st-crit { color: var(--critical); }
+.risk-low i { color: var(--good); } .risk-medium i { color: var(--warning); } .risk-high i { color: var(--critical); }
+button { font: inherit; font-size: 13px; border-radius: 7px; border: 1px solid var(--border); background: var(--raised);
+  color: var(--ink); padding: 5px 12px; cursor: pointer; }
+button:hover { border-color: var(--axis); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+button.danger { color: var(--critical); }
+button kbd { font: 11px ui-monospace, monospace; opacity: .7; margin-right: 6px; }
+button:disabled { opacity: .5; cursor: default; }
+textarea { width: 100%; font: inherit; border: 1px solid var(--border); border-radius: 7px; padding: 8px; background: var(--raised); color: var(--ink); }
+.inbox .card { border-left: 3px solid var(--warning); }
+.inbox .card.k-couldnt_run, .inbox .card.k-error, .inbox .card.k-stale, .inbox .card.k-budget_reached { border-left-color: var(--critical); }
+.inbox .card.k-approval { border-left-color: var(--accent); }
+.title { font-weight: 600; color: var(--ink); }
+.reason { margin: 4px 0 2px; }
+.detail { white-space: pre-wrap; color: var(--ink-2); max-height: 7.5em; overflow: hidden; font-size: 13px; }
+.pipe { display: flex; gap: 2px; margin: 8px 0 4px; }
+.pipe span { flex: 1; min-width: 0; text-align: center; font-size: 11px; padding: 3px 2px; border-radius: 4px;
+  background: var(--page); color: var(--muted); border: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pipe span.done { color: var(--ink-2); background: var(--surface); }
+.pipe span.done::before { content: "✓ "; color: var(--good); }
+.pipe span.cur { color: var(--ink); font-weight: 600; border-color: var(--accent); background: var(--wash); }
+.pipe span.cur.flag { border-color: var(--warning); }
+.pipe span.cur:not(.flag)::before { content: "● "; color: var(--accent); animation: pulse 1.4s infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .pipe span.cur::before { animation: none; } }
+.now { font-size: 12.5px; color: var(--ink-2); }
+.grid { display: grid; gap: 12px; }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.g4 { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.tile .k { font-size: 12px; color: var(--ink-2); }
+.tile .v { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; margin-top: 2px; }
+.tile .s { font-size: 12px; color: var(--muted); }
+.tile.hero { border-color: var(--accent); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { font-weight: 600; color: var(--ink-2); font-size: 12px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.md h4 { margin: 10px 0 4px; font-size: 14px; } .md p { margin: 6px 0; } .md ul { margin: 4px 0; padding-left: 20px; }
+.md pre { background: var(--page); padding: 8px; border-radius: 6px; overflow: auto; }
+.md table { margin: 6px 0; }
+.chart { width: 100%; height: auto; display: block; overflow: visible; }
+.chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart .gridl { stroke: var(--grid); stroke-width: 1; }
+.chart .base { stroke: var(--axis); stroke-width: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); margin: 6px 0; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.tip { position: fixed; pointer-events: none; z-index: 50; background: var(--raised); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); max-width: 320px; }
+.tip b { font-weight: 600; }
+.split { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; background: var(--page); }
+.split > div { height: 100%; }
+.transcript { max-height: 520px; overflow: auto; background: var(--page); border-radius: 8px; padding: 8px 10px; }
+.transcript .tool { color: var(--ink-2); } .transcript .tool b { color: var(--ink); }
+.transcript .result { color: var(--muted); white-space: pre-wrap; max-height: 8em; overflow: hidden; }
+.transcript .text { white-space: pre-wrap; margin: 6px 0; }
+.transcript > div { padding: 3px 0; border-bottom: 1px dashed var(--grid); }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tabs button.on { background: var(--wash); border-color: var(--accent); }
+.thumb { max-width: 220px; max-height: 140px; border: 1px solid var(--border); border-radius: 6px; display: block; margin-top: 4px; }
+.empty { padding: 28px; text-align: center; color: var(--ink-2); }
+details summary { cursor: pointer; color: var(--ink-2); }
+select { font: inherit; padding: 4px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--raised); color: var(--ink); }
+.banner { background: var(--wash); border: 1px solid var(--accent); border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; }
+@media (max-width: 640px) {
+  header { padding: 10px 16px; gap: 10px; flex-wrap: wrap; }
+  main { padding: 12px 16px 48px; }
+  .pipe span { font-size: 10px; }
+  .hide-sm { display: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">oneloop</span>
+  <nav id="nav"><a href="#/">Home</a><a href="#/metrics">Metrics</a><a href="#/health">Health</a></nav>
+  <span class="spacer"></span>
+  <span id="conn" class="conn off">offline</span>
+  <button id="pauseBtn" title="Pause: no new runs, no auto-merges">⏸ Pause all</button>
+</header>
+<main id="app"><div class="empty">Loading…</div></main>
+<div id="tip" class="tip" hidden></div>
+<script>
+"use strict";
+const TOKEN = "__ONELOOP_TOKEN__";
+const PHASES = ["spec","build","checks","verify","review","ship","ci","land"];
+const STAGE_COLOR = p => `var(--s-${p})`;
+const KIND_LABEL = {spec_questions:"questions on the issue", approval:"approve to merge", couldnt_run:"couldn't run",
+  cap_reached:"round cap reached", budget_reached:"budget reached", builder_blocked:"builder blocked",
+  conflict:"merge conflict", changed_under_us:"changed by someone", uncertain_effect:"unconfirmed GitHub write",
+  paused:"paused", error:"internal error", stale:"process died"};
+let control = {paused:false};
+let lastOverview = null;
+
+// ---------- tiny DOM helpers (text is always set as text, never as HTML) ----------
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "style") el.setAttribute("style", v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null || kid === false) continue;
+    el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+const SVGNS = "http://www.w3.org/2000/svg";
+function s(tag, attrs, ...kids) {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) if (v != null) el.setAttribute(k, v);
+  for (const kid of kids.flat()) if (kid != null) el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  return el;
+}
+const money = x => x == null ? "–" : "$" + (x < 10 ? x.toFixed(2) : x.toFixed(0));
+function dur(sec) {
+  if (sec == null) return "–";
+  sec = Math.max(0, sec);
+  if (sec < 60) return Math.round(sec) + "s";
+  if (sec < 3600) return Math.round(sec / 60) + "m";
+  if (sec < 86400) return (sec / 3600).toFixed(1) + "h";
+  return (sec / 86400).toFixed(1) + "d";
+}
+const ago = ts => dur(Date.now() / 1000 - ts);
+const pct = x => x == null ? "–" : Math.round(x * 100) + "%";
+const runKey = r => `${r.repo.replace("/", "__")}/${r.issue}`;
+const runHref = r => `#/run/${runKey(r)}`;
+
+async function api(path) {
+  const res = await fetch(path, {cache: "no-store"});
+  if (!res.ok) throw new Error(`${path}: ${res.status}`);
+  return res.json();
+}
+async function act(body) {
+  const res = await fetch("/api/action", {method: "POST", headers: {"Content-Type": "application/json", "X-Oneloop-Token": TOKEN},
+    body: JSON.stringify(body)});
+  const data = await res.json().catch(() => ({ok: false, error: res.statusText}));
+  if (!data.ok) alert("oneloop: " + (data.error || "action failed"));
+  render();
+  return data;
+}
+
+// ---------- tooltip ----------
+const tip = document.getElementById("tip");
+function showTip(ev, lines) {
+  tip.replaceChildren(...lines.map((l, i) => h("div", {}, i === 0 ? h("b", {}, l) : l)));
+  tip.hidden = false;
+  const x = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8);
+  const y = Math.min(ev.clientY + 14, innerHeight - tip.offsetHeight - 8);
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+const hideTip = () => { tip.hidden = true; };
+function hover(el, lines) {
+  el.addEventListener("mousemove", ev => showTip(ev, typeof lines === "function" ? lines() : lines));
+  el.addEventListener("mouseleave", hideTip);
+  return el;
+}
+
+// ---------- markdown (escaped first, then a small safe subset) ----------
+function esc(t) { return t.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function inline(t) {
+  return esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/&lt;!-- oneloop:[\w-]+ --&gt;/g, "");
+}
+function md(text) {
+  const out = []; let list = null, table = null, code = null;
+  const flush = () => { if (list) { out.push("<ul>" + list.join("") + "</ul>"); list = null; }
+    if (table) { out.push("<table>" + table.join("") + "</table>"); table = null; } };
+  for (const raw of (text || "").split("\n")) {
+    const line = raw.replace(/\s+$/, "");
+    if (code !== null) { if (line.startsWith("```")) { out.push("<pre>" + esc(code.join("\n")) + "</pre>"); code = null; } else code.push(raw); continue; }
+    if (line.startsWith("```")) { flush(); code = []; continue; }
+    if (/^\|.*\|$/.test(line)) { if (list) flush(); if (/^\|[\s\-:|]+\|$/.test(line)) continue;
+      table = table || []; const cells = line.slice(1, -1).split("|").map(c => inline(c.trim()));
+      table.push("<tr>" + cells.map(c => `<td>${c}</td>`).join("") + "</tr>"); continue; }
+    if (/^\s*[-*] /.test(line)) { if (table) flush(); list = list || []; list.push("<li>" + inline(line.replace(/^\s*[-*] /, "")) + "</li>"); continue; }
+    flush();
+    if (/^#{1,6} /.test(line)) out.push("<h4>" + inline(line.replace(/^#+ /, "")) + "</h4>");
+    else if (line.trim()) out.push("<p>" + inline(line) + "</p>");
+  }
+  flush(); if (code) out.push("<pre>" + esc(code.join("\n")) + "</pre>");
+  const div = h("div", {class: "md"}); div.innerHTML = out.join(""); return div;
+}
+
+// ---------- shared pieces ----------
+function riskBadge(level) {
+  if (!level) return null;
+  const icon = {low: "●", medium: "▲", high: "◆"}[level];
+  return h("span", {class: `status risk-${level}`}, h("i", {}, icon), `${level} risk`);
+}
+function outcomeBadge(o) {
+  const m = {pass: ["st-good", "✓", "pass"], fail: ["st-crit", "✕", "fail"], couldnt_run: ["st-warn", "⚠", "couldn't run"],
+    skipped: ["muted", "–", "skipped"], merged: ["st-good", "✓", "merged"], cancelled: ["muted", "–", "cancelled"],
+    running: ["ink2", "●", "running"], needs_human: ["st-warn", "⚑", "needs you"], failed: ["st-crit", "✕", "failed"],
+    done: ["st-good", "✓", "done"], stopped: ["st-warn", "■", "stopped"], error: ["st-crit", "✕", "error"]}[o] || ["muted", "·", o];
+  return h("span", {class: "status " + m[0]}, h("i", {}, m[1]), m[2]);
+}
+function pipeline(r) {
+  const idx = PHASES.indexOf(r.phase);
+  const finished = r.status === "merged";
+  return h("div", {class: "pipe", role: "img", "aria-label": `at ${r.phase}`},
+    PHASES.map((p, i) => {
+      const rnd = {build: r.rounds.build, verify: r.rounds.verify, review: r.rounds.review, ci: r.rounds.ci}[p];
+      const label = p.toUpperCase() + (rnd && p !== "build" ? ` +${rnd}` : (p === "build" && rnd > 1 ? ` r${rnd}` : ""));
+      const cls = finished || i < idx ? "done" : i === idx ? ("cur" + (r.status !== "running" || r.liveness === "stale" ? " flag" : "")) : "";
+      return h("span", {class: cls, title: p}, label);
+    }));
+}
+function actionsFor(r, compact) {
+  const nh = r.needs_human;
+  const btns = [];
+  const sendback = () => {
+    const note = prompt("What should the builder change?");
+    if (note) act({action: "sendback", repo: r.repo, issue: r.issue, note});
+  };
+  if (nh && nh.kind === "approval") {
+    btns.push(h("button", {class: "primary", onclick: () => act({action: "approve", repo: r.repo, issue: r.issue})}, h("kbd", {}, "1"), "Approve & merge"));
+    btns.push(h("button", {onclick: sendback}, h("kbd", {}, "2"), "Send back…"));
+    if (r.pr_url) btns.push(h("button", {onclick: () => open(r.pr_url, "_blank", "noopener")}, h("kbd", {}, "3"), "Open PR"));
+  } else if (nh || r.liveness === "stale") {
+    btns.push(h("button", {class: "primary", onclick: () => act({action: "resume", repo: r.repo, issue: r.issue})}, h("kbd", {}, "1"), "Resume"));
+    btns.push(h("button", {onclick: sendback}, h("kbd", {}, "2"), "Send back…"));
+    if (r.pr_url) btns.push(h("button", {onclick: () => open(r.pr_url, "_blank", "noopener")}, h("kbd", {}, "3"), "Open PR"));
+  }
+  if (!compact && (r.status === "running" || r.status === "needs_human"))
+    btns.push(h("button", {class: "danger", onclick: () => confirm(`Cancel ${r.repo}#${r.issue}?`) && act({action: "cancel", repo: r.repo, issue: r.issue})}, "Cancel run"));
+  return h("div", {class: "row"}, btns);
+}
+let hotkeyTarget = null;
+document.addEventListener("keydown", ev => {
+  if (!hotkeyTarget || ev.metaKey || ev.ctrlKey || ev.altKey || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  const btn = hotkeyTarget.querySelectorAll("button")[Number(ev.key) - 1];
+  if (btn && ["1","2","3"].includes(ev.key)) { ev.preventDefault(); btn.click(); }
+});
+
+// ---------- views ----------
+async function viewHome() {
+  const data = await api("/api/overview");
+  lastOverview = data;
+  const runs = data.runs;
+  const needs = runs.filter(r => r.status === "needs_human" || r.liveness === "stale")
+    .sort((a, b) => (a.needs_human?.since || a.updated_at) - (b.needs_human?.since || b.updated_at));
+  const running = runs.filter(r => r.status === "running" && r.liveness !== "stale").sort((a, b) => b.updated_at - a.updated_at);
+  const done = runs.filter(r => r.status === "merged" || r.status === "cancelled").sort((a, b) => b.updated_at - a.updated_at).slice(0, 12);
+  const root = h("div", {});
+  if (data.control.paused) root.append(h("div", {class: "banner"}, "⏸ Paused: no new runs start and nothing merges without you. ",
+    h("a", {href: "#", onclick: e => { e.preventDefault(); act({action: "unpause"}); }}, "Unpause")));
+
+  root.append(h("h2", {}, "Needs you", h("span", {class: "count"}, needs.length)));
+  if (!needs.length) root.append(h("div", {class: "card empty"}, "Nothing needs you right now."));
+  const inbox = h("div", {class: "inbox stack"});
+  needs.forEach((r, i) => {
+    const kind = r.liveness === "stale" && r.status === "running" ? "stale" : r.needs_human.kind;
+    const reason = kind === "stale" ? "The oneloop process for this run stopped. Resume to continue where it left off." : r.needs_human.reason;
+    const card = h("div", {class: `card k-${kind}`},
+      h("div", {class: "row"},
+        h("a", {class: "title", href: runHref(r)}, `${r.repo}#${r.issue}`), h("span", {class: "ink2"}, r.title),
+        h("span", {class: "spacer", style: "flex:1"}),
+        h("span", {class: "chip"}, KIND_LABEL[kind] || kind), riskBadge(r.risk),
+        h("span", {class: "muted", title: "time waiting on you"}, "waiting " + ago(r.needs_human?.since || r.updated_at))),
+      h("div", {class: "reason"}, reason),
+      r.needs_human?.detail && kind !== "approval" ? h("div", {class: "detail"}, r.needs_human.detail) : null,
+      kind === "approval" && r.needs_human.detail ? h("details", {}, h("summary", {}, "Brief"), md(r.needs_human.detail)) : null,
+      h("div", {class: "row", style: "margin-top:8px"}, actionsFor(r, true),
+        h("span", {class: "muted"}, `${money(r.cost_usd)} so far · at ${r.phase}`)));
+    if (i === 0) hotkeyTarget = card;
+    inbox.append(card);
+  });
+  if (!needs.length) hotkeyTarget = null;
+  root.append(inbox);
+
+  root.append(h("h2", {}, "Running", h("span", {class: "count"}, running.length)));
+  if (!running.length) root.append(h("div", {class: "card empty"}, "Nothing running. Label an issue ", h("code", {}, "oneloop"), " or run ", h("code", {}, "oneloop run <issue>"), "."));
+  const live = h("div", {class: "stack"});
+  for (const r of running) {
+    live.append(h("div", {class: "card"},
+      h("div", {class: "row"}, h("a", {class: "title", href: runHref(r)}, `${r.repo}#${r.issue}`), h("span", {class: "ink2"}, r.title),
+        h("span", {style: "flex:1"}), riskBadge(r.risk), h("span", {class: "muted"}, "⏱ " + ago(r.created_at)),
+        h("span", {class: "mono", title: "spend so far (API list price)"}, money(r.cost_usd))),
+      pipeline(r),
+      h("div", {class: "now"}, "now: ", r.live?.activity || r.phase, r.live?.ts ? h("span", {class: "muted"}, ` · ${ago(r.live.ts)} ago`) : null)));
+  }
+  root.append(live);
+
+  if (done.length) {
+    root.append(h("h2", {}, "Recently finished"));
+    root.append(h("div", {class: "card"}, h("table", {},
+      h("tr", {}, h("th", {}, "Run"), h("th", {class: "hide-sm"}, "Title"), h("th", {}, "Outcome"), h("th", {class: "num"}, "Cost"),
+        h("th", {class: "num hide-sm"}, "Took"), h("th", {class: "num hide-sm"}, "Touches"), h("th", {}, "PR")),
+      done.map(r => h("tr", {},
+        h("td", {}, h("a", {href: runHref(r)}, `${r.repo.split("/")[1]}#${r.issue}`)), h("td", {class: "hide-sm"}, r.title),
+        h("td", {}, outcomeBadge(r.status)), h("td", {class: "num"}, money(r.cost_usd)),
+        h("td", {class: "num hide-sm"}, dur(r.updated_at - r.created_at)), h("td", {class: "num hide-sm"}, r.human_touches),
+        h("td", {}, r.pr_url ? h("a", {href: r.pr_url, target: "_blank", rel: "noopener"}, "#" + r.pr_number) : "–"))))));
+  }
+  return root;
+}
+
+function timeline(d) {
+  const st = d.stages.filter(x => x.started);
+  if (!st.length) return h("div", {class: "muted"}, "No stages yet.");
+  const t0 = st[0].started, now = Date.now() / 1000;
+  const t1 = Math.max(...st.map(x => x.ended || now));
+  const W = 1000, rowH = 22, lanes = PHASES.filter(p => st.some(x => x.phase === p));
+  const H = lanes.length * rowH + 24, L = 64;
+  const x = t => L + (W - L - 8) * ((t - t0) / Math.max(1, t1 - t0));
+  const svg = s("svg", {class: "chart", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "stage timeline"});
+  lanes.forEach((p, i) => {
+    svg.append(s("text", {x: 0, y: i * rowH + 15}, p));
+    svg.append(s("line", {class: "gridl", x1: L, x2: W, y1: i * rowH + rowH - 1, y2: i * rowH + rowH - 1}));
+  });
+  for (const r of st) {
+    const i = lanes.indexOf(r.phase), x0 = x(r.started), x1 = Math.max(x0 + 3, x(r.ended || now) - 1);
+    const rect = s("rect", {x: x0, y: i * rowH + 4, width: x1 - x0, height: rowH - 9, rx: 3, fill: STAGE_COLOR(r.phase),
+      opacity: r.ended ? 1 : 0.6});
+    hover(rect, [`${r.phase}${r.round ? " round " + r.round : ""}`, `${r.status} · ${dur((r.ended || now) - r.started)} · ${money(r.cost_usd)}`,
+      r.note ? r.note.slice(0, 160) : ""]);
+    svg.append(rect);
+  }
+  svg.append(s("text", {x: L, y: H - 4}, new Date(t0 * 1000).toLocaleTimeString()));
+  svg.append(s("text", {x: W - 8, y: H - 4, "text-anchor": "end"}, dur(t1 - t0) + " total"));
+  return svg;
+}
+
+function timeSplit(d) {
+  const st = d.state;
+  const total = Math.max(1, (d.status === "running" || d.status === "needs_human" ? Date.now() / 1000 : d.updated_at) - d.created_at);
+  const humanNow = d.needs_human ? Date.now() / 1000 - d.needs_human.since : 0;
+  const human = st.human_wait_s + humanNow, ci = st.ci_wait_s, agent = Math.max(0, total - human - ci);
+  const parts = [["agents", agent, "var(--accent)"], ["CI", ci, "var(--s-ci)"], ["waiting on you", human, "var(--warning)"]];
+  return h("div", {},
+    h("div", {class: "split", role: "img", "aria-label": "time split"}, parts.filter(p => p[1] > 0).map(([n, v, c]) =>
+      hover(h("div", {style: `flex:${v};background:${c}`}), [n, dur(v) + ` (${pct(v / total)})`]))),
+    h("div", {class: "legend"}, parts.map(([n, v, c]) => h("span", {}, h("i", {style: `background:${c}`}), `${n} ${dur(v)}`))));
+}
+
+function costBars(costs) {
+  const items = PHASES.map(p => [p, costs[p] || 0]).filter(x => x[1] > 0);
+  if (!items.length) return h("div", {class: "muted"}, "No spend yet.");
+  const max = Math.max(...items.map(x => x[1]));
+  return h("table", {}, items.map(([p, v]) => h("tr", {},
+    h("td", {style: "width:70px"}, p),
+    h("td", {}, hover(h("div", {style: `height:10px;border-radius:0 4px 4px 0;background:${STAGE_COLOR(p)};width:${Math.max(2, 100 * v / max)}%`}), [p, money(v)])),
+    h("td", {class: "num", style: "width:70px"}, money(v)))));
+}
+
+function verifyTable(d) {
+  const v = d.artifacts["verify-latest.json"];
+  if (!v) return h("div", {class: "muted"}, "Not verified yet.");
+  return h("div", {},
+    h("div", {class: "row ink2"}, outcomeBadge(v.outcome), `attempt ${v.attempt} @ ${(v.sha || "").slice(0, 7)}`,
+      v.couldnt_run_reason ? h("span", {}, "· " + v.couldnt_run_reason) : null),
+    h("table", {}, h("tr", {}, h("th", {}, ""), h("th", {}, "Criterion"), h("th", {}, "What the verifier ran and saw")),
+      v.criteria.map(c => h("tr", {},
+        h("td", {}, outcomeBadge(c.outcome)),
+        h("td", {}, h("b", {}, c.id + " "), c.description || ""),
+        h("td", {}, h("div", {class: "ink2"}, c.how), h("div", {class: "mono", style: "white-space:pre-wrap"}, (c.observed || "").slice(0, 600)),
+          (c.evidence_files || []).map(f => {
+            const url = `/api/evidence?repo=${encodeURIComponent(d.repo)}&issue=${d.issue}&path=${encodeURIComponent(f)}`;
+            return /\.(png|jpe?g|gif|webp)$/i.test(f) ? h("a", {href: url, target: "_blank"}, h("img", {class: "thumb", src: url, alt: f}))
+              : h("div", {}, h("a", {href: url, target: "_blank"}, f.split("/").pop()));
+          }))))));
+}
+
+function reviewRounds(d) {
+  const rounds = Object.keys(d.artifacts).filter(k => /^review-\d+\.json$/.test(k)).sort((a, b) => parseInt(a.slice(7)) - parseInt(b.slice(7)));
+  if (!rounds.length) return h("div", {class: "muted"}, "Not reviewed yet.");
+  return h("div", {class: "stack"}, rounds.map(k => {
+    const r = d.artifacts[k];
+    const blocking = new Set(r.blocking);
+    return h("div", {},
+      h("div", {class: "row"}, h("b", {}, `Round ${r.round}`), h("span", {class: "muted"}, "@ " + (r.sha || "").slice(0, 7)),
+        blocking.size ? h("span", {class: "status st-crit"}, h("i", {}, "✕"), `${blocking.size} blocking`) : h("span", {class: "status st-good"}, h("i", {}, "✓"), "clean"),
+        h("span", {class: "ink2"}, r.summary)),
+      r.findings.length ? h("table", {}, h("tr", {}, h("th", {}, "Finding"), h("th", {}, "Severity"), h("th", {}, "Validator")),
+        r.findings.map(f => h("tr", {},
+          h("td", {}, h("b", {}, f.id + " "), h("code", {}, `${f.file}:${f.line}`), " ", f.summary,
+            h("div", {class: "muted"}, f.failure_scenario)),
+          h("td", {}, h("span", {class: "chip"}, f.severity.replace("_", "-")), blocking.has(f.id) ? h("div", {class: "st-crit"}, "blocks") : null),
+          h("td", {}, f.verdict ? h("span", {class: "chip"}, f.verdict) : "–", h("div", {class: "muted"}, f.verdict_reason || ""))))) : null,
+      r.checklist_matched?.length ? h("div", {class: "ink2", style: "margin-top:6px"}, "Checklist fired: ",
+        r.checklist_matched.map(m => h("span", {class: "chip", title: m.because}, `${m.id} ${m.title}` + (m.mode !== "enforce" ? ` (${m.mode})` : "")))) : null);
+  }));
+}
+
+function riskBlock(d) {
+  const r = d.state.risk;
+  if (!r) return h("div", {class: "muted"}, "Assessed after review.");
+  return h("div", {}, h("div", {class: "row"}, riskBadge(r.level), h("span", {class: "muted"}, `${r.lines} lines · ${r.files} files`)),
+    h("table", {}, r.reasons.map(x => h("tr", {}, h("td", {style: "width:90px"}, riskBadge(x.level)), h("td", {}, x.detail,
+      x.observed_only ? h("span", {class: "muted"}, " (observe mode: logged, not applied)") : null)))));
+}
+
+function effectsBlock(d) {
+  const e = Object.entries(d.state.effects);
+  if (!e.length) return h("div", {class: "muted"}, "No GitHub writes yet.");
+  return h("table", {}, e.map(([k, v]) => h("tr", {},
+    h("td", {class: "mono"}, k), h("td", {}, v.status === "confirmed" ? outcomeBadge("done") : h("span", {class: "status st-warn"}, h("i", {}, "⚠"), v.status)),
+    h("td", {class: "muted"}, new Date(v.at * 1000).toLocaleTimeString(), v.error ? " · " + v.error : ""))));
+}
+
+function sessionsBlock(d) {
+  const box = h("div", {class: "transcript"}, h("div", {class: "muted"}, "Pick a session."));
+  const tabs = h("div", {class: "tabs"}, d.sessions.map(name => {
+    const b = h("button", {onclick: async () => {
+      tabs.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
+      const items = await api(`/api/session?repo=${encodeURIComponent(d.repo)}&issue=${d.issue}&name=${encodeURIComponent(name)}`);
+      box.replaceChildren(...items.map(it => it.kind === "tool" ? h("div", {class: "tool"}, "→ ", h("b", {}, it.name), " ", h("span", {class: "mono"}, it.input.slice(0, 300)))
+        : it.kind === "result" ? h("div", {class: "result mono"}, it.text) : it.kind === "end" ? h("div", {class: "muted"}, "■ " + it.text)
+        : h("div", {class: "text"}, it.text)));
+    }}, name.replace(".jsonl", ""));
+    return b;
+  }));
+  return h("div", {class: "stack"}, d.sessions.length ? tabs : h("div", {class: "muted"}, "No sessions yet."), box);
+}
+
+async function viewRun(key, issue) {
+  const repo = key.replace("__", "/");
+  const d = await api(`/api/run?repo=${encodeURIComponent(repo)}&issue=${issue}`);
+  const spec = d.artifacts["spec.json"];
+  const root = h("div", {});
+  root.append(h("div", {class: "row muted"}, h("a", {href: "#/"}, "← Home")));
+  root.append(h("h1", {}, `${d.repo}#${d.issue} `, h("span", {class: "ink2", style: "font-weight:500"}, d.title)));
+  root.append(h("div", {class: "row"}, outcomeBadge(d.liveness === "stale" && d.status === "running" ? "stopped" : d.status),
+    riskBadge(d.risk), h("span", {class: "mono"}, money(d.cost_usd)), h("span", {class: "muted"}, "started " + ago(d.created_at) + " ago"),
+    h("span", {class: "muted"}, `${d.human_touches} human touch${d.human_touches === 1 ? "" : "es"}`),
+    d.pr_url ? h("a", {href: d.pr_url, target: "_blank", rel: "noopener"}, "PR #" + d.pr_number) : null,
+    h("span", {class: "muted mono hide-sm"}, d.branch)));
+  root.append(pipeline(d));
+  if (d.status === "running" && d.live?.activity) root.append(h("div", {class: "now"}, "now: " + d.live.activity));
+  const acts = actionsFor(d, false);
+  hotkeyTarget = acts;
+  if (d.needs_human) {
+    const nh = d.needs_human;
+    root.append(h("div", {class: "card", style: "margin-top:12px;border-left:3px solid var(--warning)"},
+      h("div", {class: "row"}, h("b", {}, "Needs you: " + (KIND_LABEL[nh.kind] || nh.kind)), h("span", {class: "muted"}, "waiting " + ago(nh.since))),
+      h("div", {class: "reason"}, nh.reason),
+      nh.detail ? (nh.kind === "approval" ? md(nh.detail) : h("pre", {class: "detail", style: "max-height:none"}, nh.detail)) : null,
+      h("div", {style: "margin-top:8px"}, acts)));
+  } else if (d.liveness === "stale" && d.status === "running") {
+    root.append(h("div", {class: "card", style: "margin-top:12px;border-left:3px solid var(--critical)"},
+      h("div", {class: "reason"}, "The process working on this run stopped. Resume continues from the last completed step."), acts));
+  } else root.append(h("div", {style: "margin-top:10px"}, acts));
+
+  root.append(h("h2", {}, "Timeline"), h("div", {class: "card stack"}, timeline(d), timeSplit(d)));
+  root.append(h("div", {class: "grid g2"},
+    h("div", {}, h("h2", {}, "Cost by stage"), h("div", {class: "card"}, costBars(d.costs),
+      h("div", {class: "muted", style: "font-size:12px;margin-top:6px"}, "API list price; on a subscription this is not what you are billed."))),
+    h("div", {}, h("h2", {}, "Risk"), h("div", {class: "card"}, riskBlock(d)))));
+  if (spec) root.append(h("h2", {}, "Spec"), h("div", {class: "card"}, md(d.artifacts["spec.md"] || spec.summary)));
+  root.append(h("h2", {}, "Acceptance criteria × evidence"), h("div", {class: "card"}, verifyTable(d)));
+  root.append(h("h2", {}, "Review"), h("div", {class: "card"}, reviewRounds(d)));
+  if (d.artifacts["brief.md"]) root.append(h("h2", {}, "Brief"), h("div", {class: "card"}, md(d.artifacts["brief.md"])));
+  root.append(h("h2", {}, "GitHub writes"), h("div", {class: "card"}, effectsBlock(d)));
+  root.append(h("h2", {}, "Sessions"), h("div", {class: "card"}, sessionsBlock(d)));
+  root.append(h("h2", {}, "Events"), h("div", {class: "card"}, h("details", {}, h("summary", {}, `${d.events.length} events`),
+    h("table", {}, d.events.slice().reverse().map(e => h("tr", {},
+      h("td", {class: "mono muted", style: "white-space:nowrap"}, new Date(e.ts * 1000).toLocaleTimeString()),
+      h("td", {}, e.phase), h("td", {}, h("b", {}, e.type)),
+      h("td", {class: "mono"}, JSON.stringify(Object.fromEntries(Object.entries(e).filter(([k]) => !["ts","type","phase"].includes(k)))).slice(0, 220))))))));
+  root.append(h("div", {class: "muted", style: "margin-top:16px"}, "Worktree: ", h("span", {class: "mono"}, d.worktree)));
+  return root;
+}
+
+// ---------- charts for metrics ----------
+function stackedBars(rows, keys, colorOf, valueFmt, labelOf, opts = {}) {
+  const W = opts.width || 1000, H = 220, L = 44, B = 28, T = 8;
+  const totals = rows.map(r => keys.reduce((a, k) => a + (r.stages ? r.stages[k] : r[k]) , 0));
+  const max = Math.max(0.01, ...totals);
+  const step = opts.integer ? Math.max(1, Math.ceil(niceStep(max))) : niceStep(max);
+  const top = Math.ceil(max / step) * step;
+  const y = v => T + (H - T - B) * (1 - v / top);
+  const svg = s("svg", {class: "chart", viewBox: `0 0 ${W} ${H}`, role: "img"});
+  for (let v = 0; v <= top + 1e-9; v += step) {
+    svg.append(s("line", {class: v === 0 ? "base" : "gridl", x1: L, x2: W, y1: y(v), y2: y(v)}));
+    svg.append(s("text", {x: L - 6, y: y(v) + 4, "text-anchor": "end"}, valueFmt(v)));
+  }
+  const band = (W - L) / Math.max(rows.length, 1), bw = Math.min(42, band * 0.7);
+  rows.forEach((r, i) => {
+    const cx = L + band * i + band / 2;
+    let acc = 0;
+    const segs = keys.map(k => [k, r.stages ? r.stages[k] : r[k]]).filter(x => x[1] > 0);
+    segs.forEach(([k, v], j) => {
+      const y0 = y(acc), y1 = y(acc + v);
+      const isTop = j === segs.length - 1;
+      const hgt = Math.max(1, y0 - y1 - (j > 0 ? 2 : 0));
+      const shape = isTop ? roundTop(cx - bw / 2, y1, bw, hgt, 4) : null;
+      const el = shape ? s("path", {d: shape, fill: colorOf(k)}) : s("rect", {x: cx - bw / 2, y: y1, width: bw, height: hgt, fill: colorOf(k)});
+      hover(el, [labelOf(r), `${k}: ${valueFmt(v)}`, `total ${valueFmt(totals[i])}`]);
+      svg.append(el);
+      acc += v;
+    });
+    const every = Math.max(1, Math.ceil(rows.length / Math.floor((W - L) / 64)));
+    if ((rows.length - 1 - i) % every === 0) svg.append(s("text", {x: cx, y: H - 10, "text-anchor": "middle"}, labelOf(r, true)));
+  });
+  return svg;
+}
+function roundTop(x, y, w, hgt, r) {
+  r = Math.min(r, w / 2, hgt);
+  return `M${x},${y + hgt}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + hgt}Z`;
+}
+function niceStep(max) {
+  const raw = max / 4, p = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / p;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+}
+function hbars(items, label, value) {
+  if (!items.length) return h("div", {class: "muted"}, "None.");
+  const max = Math.max(...items.map(value));
+  return h("table", {}, items.map(it => h("tr", {},
+    h("td", {style: "width:42%"}, label(it)),
+    h("td", {}, hover(h("div", {style: `height:10px;border-radius:0 4px 4px 0;background:var(--accent);width:${Math.max(2, 100 * value(it) / max)}%`}), [label(it), String(value(it))])),
+    h("td", {class: "num", style: "width:48px"}, value(it)))));
+}
+function tile(k, v, sub, hero) {
+  return h("div", {class: "card tile" + (hero ? " hero" : "")}, h("div", {class: "k"}, k), h("div", {class: "v"}, v), sub ? h("div", {class: "s"}, sub) : null);
+}
+
+let metricsFilter = {repo: "", days: 30};
+async function viewMetrics() {
+  const m = await api(`/api/metrics?repo=${encodeURIComponent(metricsFilter.repo)}&days=${metricsFilter.days}`);
+  const root = h("div", {});
+  const repoSel = h("select", {onchange: e => { metricsFilter.repo = e.target.value; render(); }},
+    h("option", {value: ""}, "All repos"), m.repos.map(r => h("option", {value: r, selected: r === metricsFilter.repo}, r)));
+  const daySel = h("select", {onchange: e => { metricsFilter.days = +e.target.value; render(); }},
+    [7, 30, 90].map(d => h("option", {value: d, selected: d === metricsFilter.days}, `Last ${d} days`)));
+  root.append(h("div", {class: "row"}, repoSel, daySel, h("span", {class: "muted"}, `${m.merged} merged · ${m.cancelled} cancelled · ${money(m.cost_total)} spent`)));
+
+  root.append(h("h2", {}, "Attention and throughput"));
+  root.append(h("div", {class: "grid g4"},
+    tile("Human touches per merged PR", m.human_touches_per_merged ?? "–", "the number this tool exists to lower", true),
+    tile("Auto-merged", pct(m.auto_merge_rate), "merged without a person"),
+    tile("Issue → merge (median)", dur(m.median_issue_to_merge_s), `of which waiting on you ${dur(m.median_human_wait_s)}`),
+    tile("Cost per merged PR", money(m.cost_per_merged), "API list price")));
+
+  root.append(h("h2", {}, "Quality guards"));
+  root.append(h("div", {class: "grid g4"},
+    tile("Revert rate", pct(m.revert_rate), "merged PRs later reverted"),
+    tile("Rejected", pct(m.rejected_rate), "runs a person cancelled"),
+    tile("Validator drop rate", pct(m.validator_drop_rate), "review findings rejected as noise"),
+    tile("Verify couldn't-run", pct(m.verify_couldnt_run_rate), "low = healthy verify skill")));
+
+  root.append(h("h2", {}, "Cost per merged PR, by stage"));
+  root.append(h("div", {class: "card"}, m.cost_per_pr.length
+    ? [h("div", {class: "legend"}, PHASES.map(p => h("span", {}, h("i", {style: `background:${STAGE_COLOR(p)}`}), p))),
+       stackedBars(m.cost_per_pr, PHASES, STAGE_COLOR, money, (r, short) => short ? "#" + r.issue : `${r.label}`)]
+    : h("div", {class: "muted"}, "No merged PRs in this window.")));
+
+  root.append(h("div", {class: "grid g2"},
+    h("div", {}, h("h2", {}, "Spend per day"), h("div", {class: "card"},
+      stackedBars(m.cost_per_day.map(d => ({...d, spend: d.cost})), ["spend"], () => "var(--accent)", money, (r, short) => short ? r.day.slice(5) : r.day, {width: 520}))),
+    h("div", {}, h("h2", {}, "Fix rounds per merged PR"), h("div", {class: "card"},
+      stackedBars(m.fix_rounds.map(r => ({...r, prs: r.count})), ["prs"], () => "var(--accent)", v => String(Math.round(v)),
+        (r, short) => short ? (r.rounds === 6 ? "6+" : String(r.rounds)) : `${r.rounds === 6 ? "6+" : r.rounds} fix rounds`,
+        {width: 520, integer: true})))));
+
+  root.append(h("div", {class: "grid g2"},
+    h("div", {}, h("h2", {}, "Why runs needed a person"), h("div", {class: "card"}, hbars(m.escalations, it => KIND_LABEL[it.kind] || it.kind, it => it.count))),
+    h("div", {}, h("h2", {}, "Gates in observe mode (would have blocked)"), h("div", {class: "card"},
+      hbars(m.observed_gates, it => it.gate, it => it.count),
+      h("div", {class: "muted", style: "font-size:12px;margin-top:6px"}, "Review these for false positives before switching a gate to enforce.")))));
+  return root;
+}
+
+async function viewHealth() {
+  const [hd, ov] = await Promise.all([api("/api/health"), api("/api/overview")]);
+  const ok = (good, label, detail) => h("tr", {}, h("td", {}, good ? h("span", {class: "status st-good"}, h("i", {}, "✓"), "ok") : h("span", {class: "status st-crit"}, h("i", {}, "✕"), "problem")),
+    h("td", {}, label), h("td", {class: "muted"}, detail || ""));
+  const gb = b => (b / 1e9).toFixed(1) + " GB";
+  const root = h("div", {});
+  root.append(h("h2", {}, "Tools"), h("div", {class: "card"}, h("table", {},
+    ok(hd.gh.ok, "GitHub CLI login", hd.gh.detail), ok(hd.claude.ok, "Claude Code", hd.claude.detail),
+    ok(hd.disk.free_bytes > 5e9, "Disk", `worktrees ${gb(hd.disk.worktrees_bytes)} · ${gb(hd.disk.free_bytes)} free`),
+    h("tr", {}, h("td", {}, ov.control.paused ? h("span", {class: "status st-warn"}, h("i", {}, "⏸"), "paused") : outcomeBadge("running")),
+      h("td", {}, "Loop"), h("td", {}, h("button", {onclick: () => act({action: ov.control.paused ? "unpause" : "pause"})}, ov.control.paused ? "Unpause" : "Pause all")))),
+    h("div", {class: "muted", style: "margin-top:6px"}, "State: ", h("span", {class: "mono"}, hd.home))));
+  root.append(h("h2", {}, "Repos"), h("div", {class: "card"}, hd.repos.length ? h("table", {},
+    h("tr", {}, h("th", {}, "Repo"), h("th", {}, "Rules on base branch"), h("th", {}, "Auto-merge low risk")),
+    hd.repos.map(r => h("tr", {},
+      h("td", {}, h("b", {}, r.repo), h("div", {class: "muted mono"}, r.path)),
+      h("td", {}, ["config", "verify_skill", "review_md", "checklist"].map(k => h("span", {class: "chip", style: "margin:2px"},
+        r.has[k] ? "✓ " : "✕ ", {config: ".oneloop.toml", verify_skill: "verify skill", review_md: "REVIEW.md", checklist: "checklist"}[k])),
+        Object.values(r.has).some(v => !v) ? h("div", {class: "muted"}, "Run ", h("code", {}, "oneloop init"), " in this repo to draft the missing ones.") : null),
+      h("td", {}, h("label", {}, h("input", {type: "checkbox", checked: r.auto_merge, onchange: e => act({action: "automerge", repo: r.repo, enabled: e.target.checked})}),
+        r.auto_merge ? " on" : " off")))))
+    : h("div", {class: "muted"}, "No repos yet. Run oneloop in a checkout to register it.")));
+  return root;
+}
+
+// ---------- router + live updates ----------
+let rendering = false, pending = false;
+async function render() {
+  if (rendering) { pending = true; return; }
+  rendering = true;
+  const route = location.hash.replace(/^#\/?/, "").split("/");
+  document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on",
+    a.getAttribute("href") === "#/" + (route[0] === "run" ? "" : route[0])));
+  const app = document.getElementById("app");
+  const scrollY = window.scrollY;
+  const openDetails = [...app.querySelectorAll("details[open] summary")].map(x => x.textContent);
+  try {
+    let view;
+    if (route[0] === "run") view = await viewRun(route[1], route[2]);
+    else if (route[0] === "metrics") { hotkeyTarget = null; view = await viewMetrics(); }
+    else if (route[0] === "health") { hotkeyTarget = null; view = await viewHealth(); }
+    else view = await viewHome();
+    app.replaceChildren(view);
+    app.querySelectorAll("details summary").forEach(sm => { if (openDetails.includes(sm.textContent)) sm.parentElement.open = true; });
+    window.scrollTo(0, scrollY);
+    const ov = lastOverview || await api("/api/overview");
+    control = ov.control;
+    const pb = document.getElementById("pauseBtn");
+    pb.textContent = control.paused ? "▶ Unpause" : "⏸ Pause all";
+    const needs = ov.runs.filter(r => r.status === "needs_human" || r.liveness === "stale").length;
+    document.title = (needs ? `(${needs}) ` : "") + "oneloop";
+  } catch (e) {
+    app.replaceChildren(h("div", {class: "card empty"}, "Could not load: " + e.message));
+  } finally {
+    rendering = false;
+    if (pending) { pending = false; render(); }
+  }
+}
+document.getElementById("pauseBtn").addEventListener("click", () => act({action: control.paused ? "unpause" : "pause"}));
+addEventListener("hashchange", () => { window.scrollTo(0, 0); render(); });
+
+let debounce;
+function connect() {
+  const conn = document.getElementById("conn");
+  const es = new EventSource("/api/stream");
+  es.addEventListener("open", () => { conn.textContent = "live"; conn.classList.remove("off"); });
+  es.addEventListener("change", () => {
+    if (document.activeElement && /TEXTAREA|INPUT|SELECT/.test(document.activeElement.tagName)) return;
+    clearTimeout(debounce); debounce = setTimeout(render, 250);
+  });
+  es.addEventListener("error", () => { conn.textContent = "reconnecting"; conn.classList.add("off"); });
+}
+render();
+// ?static renders once without live updates (used for screenshots).
+if (!new URLSearchParams(location.search).has("static")) {
+  connect();
+  setInterval(() => { if (!document.hidden) render(); }, 30000);  // keeps "ago" times fresh
+}
+</script>
+</body>
+</html>
