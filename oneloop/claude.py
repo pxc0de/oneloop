@@ -153,13 +153,15 @@ def run(
     last_text = ""
     started = time.time()
     proc_env = {**os.environ, **(env or {})}
-    with open(log_path, "a") as log:
+    stderr_path = log_path.with_suffix(".stderr")
+    with open(log_path, "a") as log, open(stderr_path, "w") as err:
         log.write(json.dumps({"type": "oneloop.session_start", "stage": stage, "model": model,
                               "resume": bool(resume), "session_id": session_id,
                               "ts": started}) + "\n")
+        # stderr goes to a file: a full stderr pipe would block the session.
         proc = subprocess.Popen(
             argv, cwd=str(cwd), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, text=True, env=proc_env,
+            stderr=err, text=True, env=proc_env,
         )
         assert proc.stdin and proc.stdout
         proc.stdin.write(prompt)
@@ -185,8 +187,9 @@ def run(
             if time.time() - started > timeout_s:
                 proc.kill()
                 break
-        stderr = proc.stderr.read() if proc.stderr else ""
+        proc.stdout.close()
         proc.wait()
+    stderr = stderr_path.read_text()
 
     if result is None:
         return SessionResult(
