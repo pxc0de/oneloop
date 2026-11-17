@@ -130,6 +130,7 @@ class RunContext:
             schema=schema,
             resume=resume,
             allow_web=bool(self.cfg["agent"]["allow_web"]),
+            permission_mode=self.cfg["agent"]["permission_mode"],
             extra_denied=list(self.cfg["agent"]["disallowed"]),
             on_activity=self.live,
             **kwargs,

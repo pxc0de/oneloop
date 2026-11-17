@@ -6,6 +6,11 @@ No stage may commit, push, rewrite history or call `gh`: the orchestrator owns
 every write to git history and to GitHub. These deny rules match command text,
 so they are a guard rail, not a sandbox; the orchestrator also checks the
 worktree and the remote after each session.
+
+Sessions run in auto permission mode by default: Claude Code's own safety
+checks (e.g. `rm -rf "$(...)"`) are decided by its classifier rather than
+denied outright, which in dontAsk mode made ordinary verify scripts fail at
+random. Explicit deny rules hold in both modes. Nobody answers prompts.
 """
 
 from __future__ import annotations
@@ -117,6 +122,7 @@ def run(
     env: dict[str, str] | None = None,
     on_activity: Callable[[str], None] | None = None,
     timeout_s: float = 3 * 3600,
+    permission_mode: str = "auto",
 ) -> SessionResult:
     profile = PROFILES[stage]
     tools = list(profile.tools) + (["WebFetch", "WebSearch"] if allow_web else [])
@@ -131,7 +137,8 @@ def run(
         "--output-format", "stream-json", "--verbose",
         "--model", model,
         "--max-budget-usd", f"{budget_usd:.2f}",
-        "--permission-mode", "dontAsk",
+        "--permission-mode", permission_mode,
+        "--permission-prompts", "none",
         "--tools", ",".join(tools),
         "--allowedTools", ",".join(allowed),
         "--disallowedTools", ",".join(denied),

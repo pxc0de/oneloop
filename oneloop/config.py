@@ -91,6 +91,9 @@ DEFAULTS: dict[str, Any] = {
     },
     "labels": {"trigger": "oneloop"},
     "agent": {
+        # auto: Claude Code's classifier decides its own safety asks.
+        # dontAsk: every ask is denied (stricter; breaks some ordinary scripts).
+        "permission_mode": "auto",
         "allow_web": False,
         # Extra tool rules denied to every agent session, e.g. "Bash(terraform apply:*)".
         "disallowed": [],
@@ -148,6 +151,8 @@ def load(text: str | None, source: str = "defaults") -> Config:
             raise ConfigError(f"gates.{name} must be one of {GATE_MODES}, got {mode!r}")
     if raw["land"]["auto_merge"] not in AUTO_MERGE_LEVELS:
         raise ConfigError(f"land.auto_merge must be one of {AUTO_MERGE_LEVELS}")
+    if raw["agent"]["permission_mode"] not in ("auto", "dontAsk"):
+        raise ConfigError("agent.permission_mode must be 'auto' or 'dontAsk'")
     if raw["ci"]["mode"] not in ("required", "none"):
         raise ConfigError("ci.mode must be 'required' or 'none'")
     return Config(raw=raw, source=source if text else "defaults")
