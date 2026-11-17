@@ -34,11 +34,12 @@ def run(path: str, stress: int = 3) -> int:
 
     work = paths.home() / "init" / paths.repo_key(repo) / time.strftime("%Y%m%d-%H%M%S")
     wt = work / "worktree"
-    branch = "oneloop/init"
+    branch = f"oneloop/init-{time.strftime('%Y%m%d-%H%M%S')}"
+    draft = ".oneloop/verify-skill.draft.md"
     gitops.add_worktree(root, wt, branch, f"origin/{base}")
     _log(f"drafting in {wt}")
     res = claude.run(
-        stage="init", prompt=render("init"), cwd=wt, model="opus", budget_usd=10.0,
+        stage="init", prompt=render("init", skill_draft=draft), cwd=wt, model="opus", budget_usd=10.0,
         log_path=work / "init.jsonl", schema=schemas.INIT,
         on_activity=_log,
     )
@@ -46,6 +47,15 @@ def run(path: str, stress: int = 3) -> int:
         _log(f"init session ended with {res.subtype}: {res.error}")
         return 1
     out = res.structured
+    # The session may not write under .claude/; move its draft into place.
+    staged = wt / draft
+    skill = wt / rules.VERIFY_SKILL_DIR / "SKILL.md"
+    if staged.exists():
+        skill.parent.mkdir(parents=True, exist_ok=True)
+        if not skill.exists():
+            staged.replace(skill)
+        else:
+            staged.unlink()
     _log(f"wrote {', '.join(out['files_written']) or 'nothing'} (${res.cost_usd:.2f})")
 
     # The orchestrator re-runs the checks itself rather than trusting the session.
@@ -59,7 +69,6 @@ def run(path: str, stress: int = 3) -> int:
     for r in check_results:
         _log(f"check {r.name}: {r.outcome} `{r.command}`")
 
-    skill = wt / rules.VERIFY_SKILL_DIR / "SKILL.md"
     smoke = []
     if skill.exists() and stress > 0:
         for i in range(1, stress + 1):

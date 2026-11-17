@@ -23,9 +23,9 @@ sensitive = ["src/auth/**"]
 
 If the repo has no CI workflows, add `[ci]\nmode = "none"`. Only use keys shown here plus `[land] auto_merge = "low"|"medium"|"off"`.
 
-## 2. `.claude/skills/verify/SKILL.md`
+## 2. The verify skill: write it to `{{skill_draft}}`
 
-The skill a verifier session uses to run the real thing and check a change end to end, like a QA engineer. Frontmatter `name: verify` and a one-line `description`. Then exact, copy-pasteable steps:
+Claude Code does not let this session write under `.claude/`, so write the skill to `{{skill_draft}}`; oneloop moves it to `.claude/skills/verify/SKILL.md` afterwards. It is the skill a verifier session uses to run the real thing and check a change end to end, like a QA engineer. Frontmatter `name: verify` and a one-line `description`. Then exact, copy-pasteable steps:
 
 - how to install and start the app or service (ports, env vars with fake values, seed data), and how to know it is ready
 - how to drive it: CLI invocations, curl requests, or browser steps for a UI
@@ -49,4 +49,4 @@ check: <what to confirm when the trigger fires>
 origin: <why: a file, an incident, or "initial setup">
 ```
 
-Report the check commands you verified and what you wrote.
+Report the check commands you verified and what you wrote, naming the verify skill by its final path.
