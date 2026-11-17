@@ -87,6 +87,9 @@ class RunState:
         default_factory=lambda: {"build": 0, "checks": 0, "verify": 0, "review": 0, "ci": 0}
     )
     build_session: str | None = None
+    start_sha: str | None = None  # base commit the branch started from
+    # Last time a person acted on this run; PR comments older than this are already seen.
+    acknowledged_at: float = 0.0
     # Work items for the next BUILD round: [{source, summary, detail}]
     feedback: list[dict[str, Any]] = field(default_factory=list)
     head_sha: str | None = None
@@ -154,6 +157,7 @@ class RunState:
             self.human_wait_s += max(0.0, now() - self.needs_human.since)
         self.status = "running"
         self.needs_human = None
+        self.acknowledged_at = now()
         if touched:
             self.human_touches += 1
 
