@@ -37,7 +37,7 @@ def main() -> int:
         return 0
 
     failures = []
-    for name, cmd in checks.items():
+    for cmd in checks.values():
         if not cmd:
             continue
         try:

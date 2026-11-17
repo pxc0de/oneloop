@@ -19,7 +19,6 @@ import shutil
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 from oneloop import control, ledger, paths, pipeline, queue
 from oneloop.github import GhCli, GitHubError, detect_repo

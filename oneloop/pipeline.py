@@ -12,7 +12,6 @@ from oneloop import control, gitops, ledger, paths
 from oneloop.context import RunContext, Stop
 from oneloop.effects import EffectUncertain, perform
 from oneloop.github import GitHub, GitHubError
-from oneloop.gitops import GitError
 from oneloop.rules import load as load_rules
 from oneloop.stages import RUNNERS
 from oneloop.state import RunLock, RunState, emit, load, save
@@ -82,7 +81,7 @@ def drive(s: RunState, gh: GitHub, only: str | None = None, fetch: bool = True) 
             s.ask_human("uncertain_effect", str(e),
                         "Check GitHub, then resume; oneloop confirms before acting again.")
             emit(s, "needs_human", kind="uncertain_effect", reason=str(e))
-        except (GitError, GitHubError, OSError, KeyError, ValueError) as e:
+        except Exception as e:  # unattended: any bug becomes a visible, resumable stop
             s.ask_human("error", f"{type(e).__name__}: {e}"[:500])
             emit(s, "error", error=str(e), traceback=traceback.format_exc()[-4000:])
         finally:

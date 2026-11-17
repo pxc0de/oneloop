@@ -4,7 +4,6 @@ remote, a fake `claude` and an in-memory GitHub."""
 import json
 import os
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path

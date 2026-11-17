@@ -262,7 +262,7 @@ class GhCli(GitHub):
         try:
             rows = json.loads(out) if out.strip() else []
         except json.JSONDecodeError:
-            raise GitHubError(f"gh pr checks: unexpected output: {out[:200]}")
+            raise GitHubError(f"gh pr checks: unexpected output: {out[:200]}") from None
         return [Check(name=r["name"], bucket=r["bucket"], link=r.get("link", "")) for r in rows]
 
     def failed_log(self, check: Check) -> str:
