@@ -199,3 +199,29 @@ LEARN = {
     },
     "required": ["rules", "prune", "notes"],
 }
+
+INIT = {
+    "type": "object",
+    "properties": {
+        "files_written": _strs,
+        "checks_verified": {
+            "type": "object",
+            "description": "The check commands you ran successfully; empty string if none.",
+            "properties": {"lint": _str, "typecheck": _str, "test": _str, "build": _str},
+            "required": ["lint", "typecheck", "test", "build"],
+        },
+        "verify_summary": {**_str, "description": "How the verify skill starts and drives the app."},
+        "notes": _str,
+    },
+    "required": ["files_written", "checks_verified", "verify_summary", "notes"],
+}
+
+SMOKE = {
+    "type": "object",
+    "properties": {
+        "outcome": _outcome,
+        "observed": _str,
+        "broken_step": {**_str, "description": "The step that did not work as written, or empty."},
+    },
+    "required": ["outcome", "observed", "broken_step"],
+}
