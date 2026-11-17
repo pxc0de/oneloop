@@ -1,0 +1,6 @@
+{
+  "name": "oneloop",
+  "version": "0.1.0",
+  "description": "oneloop in your session: status line, a toast when a run needs you, and an inbox pane with one-key approve.",
+  "types": "./types/index.d.ts"
+}

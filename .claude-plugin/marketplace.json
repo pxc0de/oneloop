@@ -1,0 +1,7 @@
+{
+  "name": "oneloop",
+  "owner": { "name": "pxc0de" },
+  "plugins": [
+    { "name": "oneloop", "source": "./mod", "description": "oneloop status line, needs-you toast and inbox pane" }
+  ]
+}
