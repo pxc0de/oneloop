@@ -13,6 +13,7 @@ import json
 import mimetypes
 import secrets
 import shutil
+import socketserver
 import subprocess
 import threading
 import time
@@ -294,10 +295,20 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"ok": False, "error": str(e)}, 400)
 
 
+class LocalServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def server_bind(self) -> None:
+        # HTTPServer.server_bind does a reverse DNS lookup (getfqdn) that can
+        # take half a minute on macOS; the name is never used here.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name = "127.0.0.1"
+        self.server_port = self.server_address[1]
+
+
 def serve(port: int = 4747, open_browser: bool = True) -> None:
     Handler.allowed_hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
-    httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    httpd.daemon_threads = True
+    httpd = LocalServer(("127.0.0.1", port), Handler)
     url = f"http://127.0.0.1:{port}/"
     print(f"oneloop dashboard: {url}  (ctrl-c to stop)")
     if open_browser:
