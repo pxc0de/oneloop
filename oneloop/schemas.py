@@ -56,8 +56,17 @@ BUILD = {
             "type": "array",
             "items": {"type": "object", "properties": {"id": _str, "why": _str}, "required": ["id", "why"]},
         },
+        "protected_edits": {
+            "type": "array",
+            "description": "Full new content for protected files your change made wrong. oneloop applies them; a person approves.",
+            "items": {
+                "type": "object",
+                "properties": {"path": _str, "content": _str, "why": _str},
+                "required": ["path", "content", "why"],
+            },
+        },
     },
-    "required": ["blocked", "blocker", "summary", "tests_added", "addressed", "not_addressed"],
+    "required": ["blocked", "blocker", "summary", "tests_added", "addressed", "not_addressed", "protected_edits"],
 }
 
 _outcome = {"type": "string", "enum": ["pass", "fail", "couldnt_run"]}

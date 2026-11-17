@@ -23,7 +23,7 @@ You implement one GitHub issue in this repository, working in a git worktree on 
 ## Rules the loop enforces
 
 - Do not commit, push, switch branches or rewrite history, and do not use `gh`. The orchestrator commits your work.
-- Do not edit these files, which judge changes: {{protected}}. A change to them sends the PR to a person.
+- Do not edit these files directly; they judge changes: {{protected}}. If your change makes one of them wrong (for example the verify skill describes the old behaviour), put its full new content in `protected_edits` with the reason. oneloop applies it, and because it changes the rules, a person approves the PR.
 - Never skip, focus, delete, add sleeps to, or add retries to a failing or flaky test to make it pass. Find the root cause. If you truly cannot, delete the test, and say which and why in `summary`. That also sends the PR to a person.
 - Never put secrets, tokens or credentials in code, tests, fixtures or logs.
 - Stay inside this worktree.

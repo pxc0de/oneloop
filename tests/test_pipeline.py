@@ -22,7 +22,7 @@ SPEC_OK = {
     "out_of_scope": [], "risk_guess": "low", "risk_reason": "tiny",
 }
 BUILD_OK = {"blocked": False, "blocker": "", "summary": "Added greet().", "tests_added": [],
-            "addressed": [], "not_addressed": []}
+            "addressed": [], "not_addressed": [], "protected_edits": []}
 VERIFY_PASS = {"criteria": [{"id": "AC1", "outcome": "pass", "how": "ran it", "observed": "hello",
                              "evidence_files": []}], "couldnt_run_reason": "", "notes": ""}
 VERIFY_CANT = {"criteria": [{"id": "AC1", "outcome": "couldnt_run", "how": "tried", "observed": "no python",
@@ -166,6 +166,22 @@ class PipelineTest(unittest.TestCase):
         s = pipeline.drive(pipeline.approve(s, self.gh), self.gh)
         self.assertEqual(s.status, "merged")
         self.assertIn("merge human", self.gh.merges[0]["body"])
+
+    def test_builder_proposes_a_rules_edit_and_a_person_approves(self):
+        edit = {"path": ".claude/skills/verify/SKILL.md", "content": "# verify\nrun app.greet()\n", "why": "new output"}
+        sneaky = {"path": "app.py", "content": "evil", "why": "not protected"}
+        self.scenario(spec=[{"output": SPEC_OK}],
+                      build=[{"output": {**BUILD_OK, "protected_edits": [edit, sneaky]},
+                              "write": {"app.py": "def greet():\n    print('hello')\n"}}],
+                      verify=[{"output": VERIFY_PASS}], review=[{"output": REVIEW_CLEAN}], brief=[{"output": BRIEF}])
+        s = self.run_loop()
+        self.assertEqual(s.needs_human.kind, "approval")
+        self.assertEqual(s.risk["level"], "high")
+        wt = Path(s.worktree)
+        self.assertEqual((wt / ".claude/skills/verify/SKILL.md").read_text(), edit["content"])
+        self.assertIn("print('hello')", (wt / "app.py").read_text(), "non-protected paths are refused")
+        events = [e["type"] for e in state.read_events(s.dir)]
+        self.assertIn("protected_edit.refused", events)
 
     def test_paused_blocks_auto_merge(self):
         control.set_paused(True)

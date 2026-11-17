@@ -8,7 +8,7 @@ import json
 import sys
 from typing import Any
 
-from oneloop import gitops, paths, render, rules, schemas
+from oneloop import globs, gitops, paths, render, rules, schemas
 from oneloop.context import RunContext
 from oneloop.prompts import UNTRUSTED_NOTE, render as render_prompt, untrusted
 
@@ -50,6 +50,25 @@ def _items_md(items: list[dict[str, Any]]) -> str:
         if it.get("detail"):
             out.append(it["detail"].strip())
     return "\n\n".join(out)
+
+
+def _apply_protected_edits(ctx: RunContext, edits: list[dict[str, Any]]) -> list[str]:
+    """Write rule-file updates the builder proposed. Only protected paths go
+    through here, only inside the worktree; the diff then touches the rules,
+    which makes the change high risk, so a person approves it."""
+    applied = []
+    root = ctx.wt.resolve()
+    for e in edits:
+        rel = e["path"].lstrip("/")
+        target = (root / rel).resolve()
+        if root not in target.parents or not globs.match_any(rel, rules.PROTECTED):
+            ctx.emit("protected_edit.refused", path=e["path"], why="not a protected path inside the worktree")
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(e["content"])
+        applied.append(rel)
+        ctx.emit("protected_edit", path=rel, why=e.get("why", ""))
+    return applied
 
 
 def run(ctx: RunContext) -> str:
@@ -120,6 +139,7 @@ def run(ctx: RunContext) -> str:
                          f"git history changed during the build session (HEAD {actual[:7]}, expected {expected[:7]})",
                          "Agents may not commit or rewrite history. Inspect the worktree: " + str(ctx.wt))
 
+        applied = _apply_protected_edits(ctx, out.get("protected_edits") or [])
         left = gitops.conflict_markers(ctx.wt)
         if left:
             ctx.escalate("conflict", "conflict markers remain after the builder's round",
@@ -131,7 +151,7 @@ def run(ctx: RunContext) -> str:
         )
         committed = gitops.commit_all(ctx.wt, message)
         if not committed:
-            if not feedback:
+            if not feedback and not applied:
                 ctx.escalate("builder_blocked", "the builder finished without changing any files")
             declined = out.get("not_addressed") or []
             ctx.escalate("builder_blocked",
