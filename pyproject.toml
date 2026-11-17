@@ -1,0 +1,20 @@
+[project]
+name = "oneloop"
+version = "0.1.0"
+description = "Issue to merged PR through staged, separately-verified Claude Code sessions."
+requires-python = ">=3.11"
+# Standard library only. Runtime tools are external binaries: git, gh, claude.
+dependencies = []
+
+[project.scripts]
+oneloop = "oneloop.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["oneloop*"]
+
+[tool.setuptools.package-data]
+oneloop = ["prompts/*.md", "dashboard/*.html", "hooks/*.py"]
