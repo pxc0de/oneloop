@@ -59,7 +59,8 @@ def run(ctx: RunContext) -> str:
         )
         res = ctx.session("verify", prompt, schema=schemas.VERIFY, add_dirs=[str(evidence)],
                           chrome=bool(ctx.cfg["verify"]["chrome"]),
-                          extra_allowed=list(ctx.cfg["verify"]["allowed"]))
+                          extra_allowed=list(ctx.cfg["verify"]["allowed"]),
+                          timeout_s=float(ctx.cfg["verify"]["timeout_min"]) * 60)
         after = gitops.status_porcelain(ctx.wt)
         tampered = after != before
         if tampered:

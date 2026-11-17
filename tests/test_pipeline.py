@@ -198,6 +198,14 @@ class PipelineTest(unittest.TestCase):
         s = self.run_loop()
         self.assertEqual(s.needs_human.kind, "budget_reached")
 
+    def test_silent_hung_session_is_killed_by_the_watchdog(self):
+        from oneloop import claude
+        self.scenario(spec=[{"hang": 30}])
+        res = claude.run(stage="spec", prompt="<!-- oneloop:stage=spec -->", cwd=self.repo, model="x",
+                         budget_usd=1, log_path=Path(self.tmp.name) / "s.jsonl", timeout_s=1)
+        self.assertEqual(res.subtype, "timeout")
+        self.assertIn("killed after", res.error)
+
     def test_base_moved_rebases_and_reverifies(self):
         self.scenario(spec=[{"output": SPEC_OK}], build=[self.build()], verify=[{"output": VERIFY_PASS}],
                       review=[{"output": REVIEW_CLEAN}])

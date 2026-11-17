@@ -32,6 +32,8 @@ DEFAULTS: dict[str, Any] = {
         "chrome": False,
         # Extra tool rules for the verifier, e.g. an MCP server for a simulator.
         "allowed": [],
+        # A verify session still running after this is killed and counts as couldn't-run.
+        "timeout_min": 30,
     },
     "ci": {
         # "required": zero CI checks on the PR is couldn't-run, not green.

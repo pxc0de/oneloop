@@ -25,6 +25,7 @@ def run(path: str, stress: int = 3) -> int:
     if not root:
         raise SystemExit(f"oneloop init: {path} is not a git checkout")
     repo, base = detect_repo(root)
+    _log(f"setting up {repo} ({root}), base {base}")
     gh = GhCli(repo)
     gitops.fetch(root, base)
     existing = [f for f in INIT_FILES if gitops.show(root, f"origin/{base}", f) is not None]
@@ -79,7 +80,7 @@ def run(path: str, stress: int = 3) -> int:
             r = claude.run(
                 stage="verify", prompt=render("smoke", evidence_dir=str(ev), verify_skill=skill.read_text()),
                 cwd=wt, model="sonnet", budget_usd=3.0, log_path=work / f"smoke-{i}.jsonl",
-                schema=schemas.SMOKE, add_dirs=[str(ev)],
+                schema=schemas.SMOKE, add_dirs=[str(ev)], timeout_s=15 * 60,
             )
             tampered = gitops.status_porcelain(wt) != before
             outcome = "couldnt_run" if (not r.ok or tampered) else r.structured["outcome"]

@@ -42,6 +42,9 @@ def main() -> int:
         os.makedirs(os.path.dirname(rel) or ".", exist_ok=True)
         with open(rel, "w") as f:
             f.write(content)
+    if entry.get("hang"):
+        import time
+        time.sleep(entry["hang"])  # a session that goes silent
     if entry.get("tamper"):
         open("stray-file.txt", "w").write("x")
 

@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -164,6 +165,16 @@ def run(
             stderr=err, text=True, env=proc_env,
         )
         assert proc.stdin and proc.stdout
+        # A watchdog, not a check per line: a hung session may print nothing.
+        timed_out = threading.Event()
+
+        def kill() -> None:
+            timed_out.set()
+            proc.kill()
+
+        watchdog = threading.Timer(timeout_s, kill)
+        watchdog.daemon = True
+        watchdog.start()
         proc.stdin.write(prompt)
         proc.stdin.close()
         last_emit = 0.0
@@ -184,17 +195,17 @@ def run(
                             last_emit = now
                     elif block.get("type") == "text":
                         last_text = block.get("text") or last_text
-            if time.time() - started > timeout_s:
-                proc.kill()
-                break
         proc.stdout.close()
         proc.wait()
+        watchdog.cancel()
     stderr = stderr_path.read_text()
 
     if result is None:
+        reason = (f"session killed after {timeout_s / 60:.0f} minutes" if timed_out.is_set()
+                  else stderr.strip() or f"claude exited {proc.returncode} without a result")
         return SessionResult(
-            session_id=session_id, ok=False, subtype="no_result", text=last_text,
-            error=(stderr.strip() or f"claude exited {proc.returncode} without a result")[-2000:],
+            session_id=session_id, ok=False, subtype="timeout" if timed_out.is_set() else "no_result",
+            text=last_text, error=reason[-2000:],
             log_path=str(log_path),
         )
     subtype = result.get("subtype", "")
