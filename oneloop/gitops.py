@@ -149,10 +149,14 @@ def patch_id(cwd: str | Path, base: str, head_ref: str = "HEAD") -> str:
     return out.split()[0] if out.strip() else ""
 
 
-def push(cwd: str | Path, branch: str, force_with_lease: bool = False) -> None:
-    args = ["push", "--quiet", "-u", "origin", f"HEAD:refs/heads/{branch}"]
-    if force_with_lease:
-        args.insert(1, "--force-with-lease")
+def push(cwd: str | Path, branch: str, expect: str | None = None, force: bool = False) -> None:
+    """Push HEAD to `branch`. With force, the lease is explicit: the remote
+    branch must be at `expect` (the last commit we confirmed pushing), or
+    absent when `expect` is None. A stale remote-tracking ref cannot block
+    it, and anyone else's push to the branch still does."""
+    args = ["push", "--quiet", "origin", f"HEAD:refs/heads/{branch}"]
+    if force:
+        args.insert(1, f"--force-with-lease=refs/heads/{branch}:{expect or ''}")
     git(cwd, *args)
 
 

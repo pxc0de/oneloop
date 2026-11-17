@@ -93,7 +93,7 @@ def run(path: str, stress: int = 3) -> int:
     if not gitops.commit_all(wt, "oneloop: set up verification and review rules\n"):
         _log("nothing to commit")
         return 1
-    gitops.push(wt, branch, force_with_lease=True)
+    gitops.push(wt, branch)
     body = "\n\n".join([
         "Drafted by `oneloop init`. These files judge every change oneloop makes, and they are read from "
         f"`{base}` only, so nothing applies until you merge this. Edit them freely: the people who own the "

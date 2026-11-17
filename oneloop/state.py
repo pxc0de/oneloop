@@ -93,6 +93,7 @@ class RunState:
     # Work items for the next BUILD round: [{source, summary, detail}]
     feedback: list[dict[str, Any]] = field(default_factory=list)
     head_sha: str | None = None
+    pushed_sha: str | None = None  # last commit confirmed on the remote branch
     verified_sha: str | None = None
     reviewed_sha: str | None = None
     reviewed_patch_id: str | None = None

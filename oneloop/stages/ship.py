@@ -23,11 +23,13 @@ def run(ctx: RunContext) -> str:
     s = ctx.state
     with ctx.stage("ship"):
         head = gitops.head(ctx.wt)
+        expect = s.pushed_sha
         perform(
             s, f"push:{head}",
-            act=lambda: gitops.push(ctx.wt, s.branch, force_with_lease=True),
+            act=lambda: gitops.push(ctx.wt, s.branch, expect=expect, force=True),
             confirm=lambda: head if gitops.remote_sha(ctx.wt, s.branch) == head else None,
         )
+        s.pushed_sha = head
         body = pr_body(ctx)
         existing = ctx.gh.pr_for_branch(s.branch)
         if existing is None or existing.state == "CLOSED":

@@ -245,6 +245,24 @@ class PipelineTest(unittest.TestCase):
         self.assertEqual(again.phase, "spec")
         self.assertTrue(any(p.name.startswith("1.cancelled-") for p in s.dir.parent.iterdir()))
 
+    def test_push_ignores_a_stale_tracking_ref_but_not_someone_elses_push(self):
+        from oneloop import gitops
+        sh(self.repo, "git", "checkout", "-qb", "feature")
+        (self.repo / "a.txt").write_text("1")
+        sh(self.repo, "git", "add", "-A"); sh(self.repo, "git", "commit", "-qm", "1")
+        gitops.push(self.repo, "feature", expect=None, force=True)
+        first = gitops.head(self.repo)
+        # The branch is deleted on the remote (e.g. PR closed); the tracking ref goes stale.
+        sh(self.remote, "git", "update-ref", "-d", "refs/heads/feature")
+        gitops.push(self.repo, "feature", expect=None, force=True)  # expected absent: allowed
+        self.assertEqual(gitops.remote_sha(self.repo, "feature"), first)
+        # Someone else pushes to the branch: our lease must refuse to overwrite it.
+        sh(self.remote, "git", "update-ref", "refs/heads/feature", gitops.rev(self.repo, "HEAD~1"))
+        (self.repo / "a.txt").write_text("2")
+        sh(self.repo, "git", "commit", "-qam", "2")
+        with self.assertRaises(gitops.GitError):
+            gitops.push(self.repo, "feature", expect=first, force=True)
+
     def test_silent_hung_session_is_killed_by_the_watchdog(self):
         from oneloop import claude
         self.scenario(spec=[{"hang": 30}])
