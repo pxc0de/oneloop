@@ -62,7 +62,7 @@ def make_brief(ctx: RunContext, why: str) -> str:
     res = ctx.session("brief", prompt, schema=schemas.BRIEF)
     if res.ok and res.structured:
         ctx.write_artifact("brief.json", res.structured)
-        md = render.brief_md(res.structured, why)
+        md = render.brief_md(res.structured, why, s.issue)
     else:
         # Never block a decision on the brief: fall back to the facts we have.
         md = "\n\n".join([

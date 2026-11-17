@@ -110,7 +110,7 @@ def pr_body(state: Any, spec: dict[str, Any], build: dict[str, Any] | None,
     return "\n\n".join(parts)
 
 
-def brief_md(brief: dict[str, Any], why_human: str) -> str:
+def brief_md(brief: dict[str, Any], why_human: str, issue: int) -> str:
     look = "\n".join(f"- `{x['file']}` {x['lines']}: {x['why']}" for x in brief.get("look_at") or [])
     return "\n\n".join([
         f"### oneloop brief: {brief.get('headline', '')}",
@@ -121,5 +121,6 @@ def brief_md(brief: dict[str, Any], why_human: str) -> str:
         "**Look at**\n" + (look or "- (nothing specific)"),
         f"**Recommendation:** {brief.get('recommendation', '?').replace('_', ' ')}. "
         f"{brief.get('recommendation_reason', '')}",
-        "Approve: `oneloop approve <issue>` or the dashboard. Send back: `oneloop sendback <issue> \"note\"`.",
+        f"Approve: `oneloop approve {issue}`, key 1 in `/oneloop`, or the dashboard. "
+        f"Send back: `oneloop sendback {issue} \"what to change\"`.",
     ])
