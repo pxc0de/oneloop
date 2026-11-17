@@ -198,6 +198,26 @@ class PipelineTest(unittest.TestCase):
         s = self.run_loop()
         self.assertEqual(s.needs_human.kind, "budget_reached")
 
+    def test_conflict_with_base_goes_to_the_builder_not_a_person(self):
+        self.scenario(spec=[{"output": SPEC_OK}],
+                      build=[self.build(), self.build("def greet():\n    print('hello, world')\n")],
+                      verify=[{"output": VERIFY_PASS}], review=[{"output": REVIEW_CLEAN}])
+        s = pipeline.start("o/r", str(self.repo), 1, self.gh, "main")
+        for phase in ("spec", "build", "checks", "verify", "review", "ship", "ci"):
+            s = pipeline.drive(s, self.gh, only=phase)
+        # Another change lands on the same line first.
+        (self.repo / "app.py").write_text("def greet():\n    print('hi')\n")
+        sh(self.repo, "git", "commit", "-qam", "hi")
+        sh(self.repo, "git", "push", "-q", "origin", "HEAD:main")
+        s = pipeline.drive(s, self.gh)
+        self.assertEqual(s.status, "merged", s.needs_human)
+        self.assertEqual(s.rounds["conflict"], 1)
+        builds = [c for c in self.calls()["_log"] if c["stage"] == "build"]
+        self.assertTrue(builds[-1]["resume"], "the builder's own session resolves the conflict")
+        log = subprocess.run(["git", "log", "--format=%s", "-3", "refs/heads/oneloop/1-add-greet"],
+                             cwd=self.remote, capture_output=True, text=True).stdout
+        self.assertIn("merge origin/main", log)
+
     def test_silent_hung_session_is_killed_by_the_watchdog(self):
         from oneloop import claude
         self.scenario(spec=[{"hang": 30}])

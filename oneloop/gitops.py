@@ -171,3 +171,21 @@ def rebase(cwd: str | Path, onto: str) -> bool:
 
 def is_ancestor(cwd: str | Path, ancestor: str, descendant: str) -> bool:
     return ok(cwd, "merge-base", "--is-ancestor", ancestor, descendant)
+
+
+def merge_start(cwd: str | Path, onto: str) -> list[str]:
+    """Start merging `onto` without committing. Returns the conflicted paths
+    (empty if it merged cleanly, in which case the merge is still uncommitted)."""
+    git(cwd, "merge", "--no-commit", "--no-ff", onto, check=False)
+    out = git(cwd, "diff", "--name-only", "--diff-filter=U")
+    return [p for p in out.splitlines() if p]
+
+
+def merging(cwd: str | Path) -> bool:
+    return ok(cwd, "rev-parse", "-q", "--verify", "MERGE_HEAD")
+
+
+def conflict_markers(cwd: str | Path) -> list[str]:
+    """Tracked files that still contain conflict markers."""
+    out = git(cwd, "grep", "-l", "-E", "^(<<<<<<<|>>>>>>>)( |$)", check=False)
+    return [p for p in out.splitlines() if p]

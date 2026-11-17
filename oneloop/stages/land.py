@@ -109,8 +109,7 @@ def _recheck(ctx: RunContext) -> str | None:
     if not gitops.is_ancestor(ctx.wt, base, "HEAD"):
         old_pid = s.reviewed_patch_id
         if not gitops.rebase(ctx.wt, base):
-            ctx.escalate("conflict", f"the branch no longer rebases cleanly onto {base}",
-                         f"Resolve in {ctx.wt} or close the PR.")
+            return _resolve_conflict(ctx, base)
         s.head_sha = gitops.head(ctx.wt)
         s.verified_sha = None
         same = bool(old_pid) and gitops.patch_id(ctx.wt, base) == old_pid
@@ -127,6 +126,29 @@ def _recheck(ctx: RunContext) -> str | None:
         if not checks or any(c.bucket in ("pending", "fail", "cancel") for c in checks):
             return "ci"
     return None
+
+
+def _resolve_conflict(ctx: RunContext, base: str) -> str:
+    """Another change landed on the same lines. Start the merge here and hand
+    the conflicted files to the builder's own session; a person is needed only
+    if that fails twice."""
+    s = ctx.state
+    s.rounds["conflict"] = s.rounds.get("conflict", 0) + 1
+    if s.rounds["conflict"] > 2:
+        ctx.escalate("conflict", f"conflicts with {base} remain after 2 attempts to resolve them",
+                     f"Resolve in {ctx.wt} and resume, or close the PR.")
+    files = gitops.merge_start(ctx.wt, base)
+    s.verified_sha = None
+    s.reviewed_sha = None  # the next review sees the whole change against the new base
+    ctx.emit("conflict", files=files, attempt=s.rounds["conflict"])
+    ctx.add_feedback("rebase", [{
+        "summary": f"{base} changed the same code; resolve the merge conflicts in " + ", ".join(f"`{f}`" for f in files),
+        "detail": (f"oneloop has started `git merge {base}` in this worktree. The files above contain conflict "
+                   "markers. Resolve each conflict so both the change on the base branch and this issue's "
+                   "change keep working, remove every marker, and run the checks. Do not run git commands; "
+                   "oneloop commits the merge."),
+    }])
+    return "build"
 
 
 def _finish_merged(ctx: RunContext, by_human: bool, merge_commit: str | None) -> None:

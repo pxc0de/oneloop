@@ -18,7 +18,7 @@ SOURCE_NAMES = {
     "review": "an independent code review (findings confirmed by a second session)",
     "ci": "CI on the pull request",
     "human": "a person",
-    "rebase": "rebasing onto the latest base branch",
+    "rebase": "merging the latest base branch, which changed the same code",
 }
 
 
@@ -120,8 +120,13 @@ def run(ctx: RunContext) -> str:
                          f"git history changed during the build session (HEAD {actual[:7]}, expected {expected[:7]})",
                          "Agents may not commit or rewrite history. Inspect the worktree: " + str(ctx.wt))
 
+        left = gitops.conflict_markers(ctx.wt)
+        if left:
+            ctx.escalate("conflict", "conflict markers remain after the builder's round",
+                         "\n".join(f"- {f}" for f in left) + f"\n\nResolve in {ctx.wt} and resume.")
         message = (
-            f"oneloop: {'build' if not feedback else 'fix'} round {rnd} for #{s.issue}\n\n"
+            f"oneloop: {'merge ' + ctx.rules.base_ref + ' and ' if gitops.merging(ctx.wt) else ''}"
+            f"{'build' if not feedback else 'fix'} round {rnd} for #{s.issue}\n\n"
             f"{out['summary'].strip()}\n"
         )
         committed = gitops.commit_all(ctx.wt, message)
